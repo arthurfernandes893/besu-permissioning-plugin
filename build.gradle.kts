@@ -4,25 +4,26 @@
  * This is a general purpose Gradle build.
  * Learn more about Gradle by exploring our Samples at https://docs.gradle.org/8.10.2/samples
  */
-group = "br.gov.bndes.rbb"
+group = "rbb"
 version = "1.0.0-SNAPSHOT"
 
 plugins {
     id("java")
+     id("com.github.johnrengelman.shadow") version "8.1.1"
 }
 
 
 //usado para as dependências
 repositories {
-    maven { 
-        isAllowInsecureProtocol = true
-        
-        url = uri("http://mvnrepo.bndes.net:8180/nexus/content/groups/public/")
-        credentials{ 
-            username = project.findProperty("repoUsername") as String?
-            password = project.findProperty("repoPassword") as String?
-        }
+    maven {
+      url = uri("https://hyperledger.jfrog.io/hyperledger/besu-maven")
+      content { includeGroupByRegex("org\\.hyperledger\\..*") }
     }
+    maven {
+      url = uri("https://artifacts.consensys.net/public/maven/maven/")
+      content { includeGroupByRegex("tech\\.pegasys(\\..*)?") }
+    }
+    mavenCentral()
 }
 
 dependencies {
@@ -41,28 +42,8 @@ dependencies {
     implementation("org.hyperledger.besu:plugin-api:24.8.0")
     implementation("org.hyperledger.besu:besu-datatypes:24.8.0") 
     implementation("org.hyperledger.besu:evm:24.8.0") 
-    implementation("org.hyperledger.besu:api:24.8.0") 
-    implementation("org.hyerledger.besu:crypto:23.1.3")
-    implementation("org.hyperledger.besu:core:24.8.0")
-    implementation("org.hyperledger.besu:permissioning:24.8.0")
+    implementation("org.hyperledger.besu.internal:api:24.8.0") 
+    implementation("org.hyperledger.besu.internal:crypto:23.1.3")
+    implementation("org.hyperledger.besu.internal:core:24.8.0")
+    implementation("org.hyperledger.besu.internal:permissioning:24.8.0")
 }
-
-buildscript {
-    repositories {
-        maven { 
-            isAllowInsecureProtocol = true
-            
-            url = uri("http://mvnrepo.bndes.net:8180/nexus/content/groups/public/")
-            credentials{ 
-                username = project.findProperty("repoUsername") as String?
-                password = project.findProperty("repoPassword") as String?
-            }
-        }
-    }
-    dependencies {
-        classpath("com.github.johnrengelman:shadow:8.1.1")
-    }
-
-    
-}
-apply(plugin = "com.github.johnrengelman.shadow")
