@@ -20,8 +20,12 @@ Além disso, para garantir auditabilidade, foram adicionados logs ao fim de cada
 Em conformidade com as especificações do Besu, o plugin deve ser um arquivo `.jar` auto-contido ("fat Jar"). Para isso, utilizamos o conhecido plugin do Gradle, **Shadow**. Para realizar o build, tendo o Gradle já sido configurado, basta utilizar o comando:
 
 ```bash
-gradle shadowJar
+gradlew shadowJar
 ```
+
+**Observação**: Opcionalmente, caso já se tenha o gradle instalado localmente, pode-se utilizá-lo diretamente, com o comando `gradle shadowJar`, para realização do build.
+
+O arquivo binário do plugin será gerado em `build/libs/besu-permissioning-plugin-<versao>-all.jar`
 
 ## Links Úteis:
 - [Plugins | Besu documentation](https://besu.hyperledger.org/private-networks/concepts/plugins)
