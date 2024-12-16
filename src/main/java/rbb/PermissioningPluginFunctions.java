@@ -40,7 +40,10 @@ import org.hyperledger.besu.ethereum.transaction.CallParameter;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public class PermissioningPluginFunctions {
-     
+
+    public static final String FUNCTION_SIGNATURE = "connectionAllowed(bytes32,bytes32,bytes16,uint16,bytes32,bytes32,bytes16,uint16)";
+    public static final Bytes FUNCTION_SIGNATURE_HASH = Hash.keccak256(Bytes.of(FUNCTION_SIGNATURE.getBytes(UTF_8))).slice(0, 4);  
+
     static {  
         //fake signature for transaction simulation
         final X9ECParameters params = SECNamedCurves.getByName("secp256k1");
@@ -72,8 +75,4 @@ public class PermissioningPluginFunctions {
 
     }
 
-    public static Bytes hashFunctionSignature(){
-        String FUNCTION_SIGNATURE = "connectionAllowed(bytes32,bytes32,bytes16,uint16,bytes32,bytes32,bytes16,uint16)";
-        return Hash.keccak256(Bytes.of(FUNCTION_SIGNATURE.getBytes(UTF_8))).slice(0, 4);  
-    }
 }

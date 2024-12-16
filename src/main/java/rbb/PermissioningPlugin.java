@@ -55,12 +55,14 @@ import org.hyperledger.besu.evm.tracing.OperationTracer;
 @AutoService(BesuPlugin.class)
 public class PermissioningPlugin implements BesuPlugin{
   
-  private static Logger LOG = LogManager.getLogger(PermissioningPlugin.class);
-  private static String PLUGIN_PREFIX = "permissioning";
+  private static final Logger LOG = LogManager.getLogger(PermissioningPlugin.class);
+  private static final String PLUGIN_PREFIX = "permissioning";
+  //positive return from Connection Allowed
+  private static final String ALLOW = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
 
-  PermissioningService permissioning_service;
-  BlockchainService blockchain_service;
-  TransactionSimulationService txSimulation_service;
+  private PermissioningService permissioning_service;
+  private BlockchainService blockchain_service;
+  private TransactionSimulationService txSimulation_service;
 
   @Override
   public void register(BesuContext context) {
@@ -89,9 +91,9 @@ public class PermissioningPlugin implements BesuPlugin{
     LOG.info("Successfully stopped PermissioningPlugin");
   }
 
-/*
- * CLI Options
- */
+  /*
+   * CLI Options
+   */
 
   // CLI names must be of the form "--plugin-<namespace>-...."
   @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_NODE_INGRESS_ADDRESS}")
@@ -102,9 +104,9 @@ public class PermissioningPlugin implements BesuPlugin{
   }
   
 
-/*
- * Function to perform the call to the NodeIngress Contract
- */
+  /*
+   * Function to perform the call to the NodeIngress Contract
+   */
 
   public boolean checkConnectionAllowed(final EnodeURL sourceEnode, final EnodeURL destinationEnode){
 
@@ -112,8 +114,8 @@ public class PermissioningPlugin implements BesuPlugin{
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
     //create Payload:
-    Bytes functionSignature = PermissioningPluginFunctions.hashFunctionSignature();
-    final Bytes txPayload = NodeSmartContractPermissioningController.createPayload(functionSignature, sourceEnode, destinationEnode);  
+    final Bytes txPayload = NodeSmartContractPermissioningController.createPayload(
+      PermissioningPluginFunctions.FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
 
     //Create callParameters(from,to,gasLimit,gasPrice,value,payload)
     CallParameter callParams = new CallParameter(
@@ -130,12 +132,9 @@ public class PermissioningPlugin implements BesuPlugin{
     //simulation
     Optional<TransactionSimulationResult>  txSimulationResult = txSimulation_service.simulate(tx, chainHeadHash, OperationTracer.NO_TRACING, true);
 
-    //positive return from Connection Allowed
-    String allow = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-
     if(txSimulationResult.isPresent()){
       if (txSimulationResult.get().isSuccessful()) {
-        if( txSimulationResult.get().result().getOutput().compareTo(Bytes.fromHexString(allow)) == 0) {
+        if( txSimulationResult.get().result().getOutput().compareTo(Bytes.fromHexString(ALLOW)) == 0) {
           LOG.debug("Permissioning Tx SUCCESSFULL - Connection ALLOWED for {}",destinationEnode);
           return true;
         }   
@@ -145,7 +144,7 @@ public class PermissioningPlugin implements BesuPlugin{
         }  
       }
       else{ 
-        LOG.debug("Permissioning Tx Simulation Happend but UNSUCCESSFULL - If smart contract address is correct, either REVERTED or INVALID - Connection FORBIDDEN", allow);
+        LOG.debug("Permissioning Tx Simulation Happend but UNSUCCESSFULL - If smart contract address is correct, either REVERTED or INVALID - Connection FORBIDDEN", ALLOW);
 
         if(!txSimulationResult.get().getRevertReason().isEmpty()){
           LOG.trace("Permissioning Tx Simulation Happend but UNSUCCESSFULL - Permissioning Tx was REVERTED");
@@ -163,6 +162,5 @@ public class PermissioningPlugin implements BesuPlugin{
       return false;
     }
   }
-
 
 }
