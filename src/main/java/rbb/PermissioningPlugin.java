@@ -81,12 +81,12 @@ public class PermissioningPlugin implements BesuPlugin{
 
   @Override
   public void start() {
-    LOG.info("Successfully started {}", "PermissioningPlugin");
+    LOG.info("Successfully started PermissioningPlugin");
   }
 
   @Override
   public void stop() {
-    LOG.info("Successfully stopped {}", "PermissioningPlugin");
+    LOG.info("Successfully stopped PermissioningPlugin");
   }
 
 /*
@@ -94,7 +94,7 @@ public class PermissioningPlugin implements BesuPlugin{
  */
 
   // CLI names must be of the form "--plugin-<namespace>-...."
-  @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the permissioning decision", defaultValue = "${env:BESU_PERMISSIONS_NODES_CONTRACT_ADDRESS}")
+  @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_NODE_INGRESS_ADDRESS}")
   public String nodeIngressAdress;
 
   private void createPicoCLIOptions(final PicoCLIOptions picoCLIOptions) {
