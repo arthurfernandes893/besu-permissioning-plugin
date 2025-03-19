@@ -4,46 +4,58 @@
  * This is a general purpose Gradle build.
  * Learn more about Gradle by exploring our Samples at https://docs.gradle.org/8.10.2/samples
  */
-group = "rbb"
-version = "1.0.0-SNAPSHOT"
 
-plugins {
-    id("java")
-     id("com.github.johnrengelman.shadow") version "8.1.1"
+object Versions {
+  const val log4j = "2.13.1"
+  const val picocli = "4.7.6"
+  const val autoService = "1.1.1"
+  const val tuweni = "2.4.2"
+  const val bouncycastle = "1.80"
+  const val besu = "25.3.0"
+  const val besuCrypto = "23.1.3"
 }
 
+group = "rbb"
+version = "${Versions.besu}-1.0.0-SNAPSHOT"
 
-//usado para as dependências
+plugins {
+  id("java")
+  id("com.github.johnrengelman.shadow") version "8.1.1"
+  id("se.patrikerdes.use-latest-versions") version "0.2.18"
+  id("com.github.ben-manes.versions") version "0.41.0"
+}
+
+// Used for the dependencies
 repositories {
-    maven {
-      url = uri("https://hyperledger.jfrog.io/hyperledger/besu-maven")
-      content { includeGroupByRegex("org\\.hyperledger\\..*") }
-    }
-    maven {
-      url = uri("https://artifacts.consensys.net/public/maven/maven/")
-      content { includeGroupByRegex("tech\\.pegasys(\\..*)?") }
-    }
-    mavenCentral()
+  maven {
+    url = uri("https://hyperledger.jfrog.io/hyperledger/besu-maven")
+    content { includeGroupByRegex("org\\.hyperledger\\..*") }
+  }
+  maven {
+    url = uri("https://artifacts.consensys.net/public/maven/maven/")
+    content { includeGroupByRegex("tech\\.pegasys(\\..*)?") }
+  }
+  mavenCentral()
 }
 
 dependencies {
-    implementation("org.apache.logging.log4j:log4j-slf4j-impl:2.13.1")
-    implementation("info.picocli:picocli:4.7.6")
+  implementation("org.apache.logging.log4j:log4j-slf4j-impl:${Versions.log4j}")
+  implementation("info.picocli:picocli:${Versions.picocli}")
 
-    // annotationProcessor generates the file META-INF/services/org.hyperledger.besu.plugin.BesuPlugin
-    annotationProcessor("com.google.auto.service:auto-service:1.0")
+  // annotationProcessor generates the file META-INF/services/org.hyperledger.besu.plugin.BesuPlugin
+  annotationProcessor("com.google.auto.service:auto-service:${Versions.autoService}")
 
-    implementation("com.google.auto.service:auto-service:1.0")
-    implementation("io.tmio:tuweni-bytes:2.4.2")
-    implementation("io.tmio:tuweni-units:2.4.2")
+  implementation("com.google.auto.service:auto-service:${Versions.autoService}")
+  implementation("io.tmio:tuweni-bytes:${Versions.tuweni}")
+  implementation("io.tmio:tuweni-units:${Versions.tuweni}")
 
-    implementation("org.bouncycastle:bcprov-jdk18on:1.77")
-    
-    implementation("org.hyperledger.besu:plugin-api:24.8.0")
-    implementation("org.hyperledger.besu:besu-datatypes:24.8.0") 
-    implementation("org.hyperledger.besu:evm:24.8.0") 
-    implementation("org.hyperledger.besu.internal:api:24.8.0") 
-    implementation("org.hyperledger.besu.internal:crypto:23.1.3")
-    implementation("org.hyperledger.besu.internal:core:24.8.0")
-    implementation("org.hyperledger.besu.internal:permissioning:24.8.0")
+  implementation("org.bouncycastle:bcprov-jdk18on:${Versions.bouncycastle}")
+
+  implementation("org.hyperledger.besu:plugin-api:${Versions.besu}")
+  implementation("org.hyperledger.besu:besu-datatypes:${Versions.besu}")
+  implementation("org.hyperledger.besu:evm:${Versions.besu}")
+  implementation("org.hyperledger.besu.internal:api:${Versions.besu}")
+  implementation("org.hyperledger.besu.internal:crypto:${Versions.besuCrypto}")
+  implementation("org.hyperledger.besu.internal:core:${Versions.besu}")
+  implementation("org.hyperledger.besu.internal:permissioning:${Versions.besu}")
 }
