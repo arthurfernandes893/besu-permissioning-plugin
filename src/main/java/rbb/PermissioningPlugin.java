@@ -31,7 +31,7 @@ import org.apache.tuweni.bytes.Bytes;
 
 import java.util.Optional;
 
-import org.hyperledger.besu.plugin.BesuContext;
+import org.hyperledger.besu.plugin.ServiceManager;
 import org.hyperledger.besu.plugin.BesuPlugin;
 
 import org.hyperledger.besu.plugin.services.PermissioningService;
@@ -65,18 +65,30 @@ public class PermissioningPlugin implements BesuPlugin{
   private TransactionSimulationService txSimulation_service;
 
   @Override
-  public void register(BesuContext context) {
+  public void register(ServiceManager context) {
 
     context
-          .getService(PicoCLIOptions.class)
-          .ifPresentOrElse(this::createPicoCLIOptions, () -> LOG.error("Could not obtain PicoCLIOptionsService"));
+        .getService(PicoCLIOptions.class)
+        .ifPresentOrElse(this::createPicoCLIOptions, () -> LOG.error("Could not obtain PicoCLIOptionsService"));
 
-    permissioning_service = context.getService(PermissioningService.class).get(); 
-    blockchain_service = context.getService(BlockchainService.class).get();
-    txSimulation_service = context.getService(TransactionSimulationService.class).get();
+    context
+        .getService(PermissioningService.class)
+        .ifPresentOrElse(PermService -> this.permissioning_service = PermService, () -> LOG.error("Could not obtain PermissioningService"));
+
+    context
+          .getService(BlockchainService.class)
+          .ifPresentOrElse(blockchainService -> this.blockchain_service = blockchainService, () -> LOG.error("Could not obtain BlockchainService"));
+
+    context
+          .getService(TransactionSimulationService.class)
+          .ifPresentOrElse(TxSimService -> this.txSimulation_service = TxSimService, null);;
     
     permissioning_service.registerNodePermissioningProvider((sourceEnode, destinationEnode) -> {
       return checkConnectionAllowed(sourceEnode, destinationEnode);
+    });
+
+    permissioning_service.registerTransactionPermissioningProvider((tx) -> {
+      return TransactionPermissioningPluginFunctions.checkTxAllowed(tx);
     });
     
   }
@@ -115,7 +127,7 @@ public class PermissioningPlugin implements BesuPlugin{
 
     //create Payload:
     final Bytes txPayload = NodeSmartContractPermissioningController.createPayload(
-      PermissioningPluginFunctions.FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
+      NodePermissioningPluginFunctions.FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
 
     //Create callParameters(from,to,gasLimit,gasPrice,value,payload)
     CallParameter callParams = new CallParameter(
@@ -127,10 +139,10 @@ public class PermissioningPlugin implements BesuPlugin{
                                                   txPayload);
 
     //Create Transaction
-    Transaction tx = PermissioningPluginFunctions.createTransactionForSimulation(callParams, -1);
+    Transaction tx = NodePermissioningPluginFunctions.createTransactionForSimulation(callParams, -1);
     
     //simulation
-    Optional<TransactionSimulationResult>  txSimulationResult = txSimulation_service.simulate(tx, chainHeadHash, OperationTracer.NO_TRACING, true);
+    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
 
     if(txSimulationResult.isPresent()){
       if (txSimulationResult.get().isSuccessful()) {
