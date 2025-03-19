@@ -39,7 +39,7 @@ import org.hyperledger.besu.ethereum.transaction.CallParameter;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class PermissioningPluginFunctions {
+public class NodePermissioningPluginFunctions {
 
     public static final String FUNCTION_SIGNATURE = "connectionAllowed(bytes32,bytes32,bytes16,uint16,bytes32,bytes32,bytes16,uint16)";
     public static final Bytes FUNCTION_SIGNATURE_HASH = Hash.keccak256(Bytes.of(FUNCTION_SIGNATURE.getBytes(UTF_8))).slice(0, 4);  
