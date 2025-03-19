@@ -32,7 +32,7 @@ jobs:
 
     # Step 4: Run the Gradle shadowJar task
     - name: Build Fat JAR with ShadowJar
-      run: ./gradlew shadowJar
+      run: . ./gradlew shadowJar
       # This command runs the Gradle shadowJar task to create a fat JAR (a single JAR containing all dependencies)
 
     # Step 5: Verify the output
