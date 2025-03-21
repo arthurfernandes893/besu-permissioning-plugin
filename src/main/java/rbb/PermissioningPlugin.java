@@ -57,9 +57,7 @@ public class PermissioningPlugin implements BesuPlugin{
   
   private static final Logger LOG = LogManager.getLogger(PermissioningPlugin.class);
   private static final String PLUGIN_PREFIX = "permissioning";
-  //positive return from Connection Allowed
-  private static final String ALLOW = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-
+    
   private PermissioningService permissioning_service;
   private BlockchainService blockchain_service;
   private TransactionSimulationService txSimulation_service;
@@ -110,7 +108,7 @@ public class PermissioningPlugin implements BesuPlugin{
   // CLI names must be of the form "--plugin-<namespace>-...."
   @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_NODE_INGRESS_ADDRESS}")
   public String nodeIngressAdress;
-
+  
   private void createPicoCLIOptions(final PicoCLIOptions picoCLIOptions) {
     picoCLIOptions.addPicoCLIOptions(PLUGIN_PREFIX, this);
   }
@@ -125,54 +123,50 @@ public class PermissioningPlugin implements BesuPlugin{
     //obtaining blockchain head hash
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
-    //create Payload:
-    final Bytes txPayload = NodeSmartContractPermissioningController.createPayload(
-      NodePermissioningPluginFunctions.FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
-
-    //Create callParameters(from,to,gasLimit,gasPrice,value,payload)
-    CallParameter callParams = new CallParameter(
-                                                  null, 
-                                                  Address.fromHexString(nodeIngressAdress),
-                                                  -1, 
-                                                  null, 
-                                                  null, 
-                                                  txPayload);
-
     //Create Transaction
-    Transaction tx = NodePermissioningPluginFunctions.createTransactionForSimulation(callParams, -1);
+    Transaction tx = PermissioningPluginFunctions.generateTransactionForSimulation(sourceEnode,destinationEnode,nodeIngressAdress);
     
     //simulation
     Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
 
-    if(txSimulationResult.isPresent()){
-      if (txSimulationResult.get().isSuccessful()) {
-        if( txSimulationResult.get().result().getOutput().compareTo(Bytes.fromHexString(ALLOW)) == 0) {
-          LOG.debug("Permissioning Tx SUCCESSFULL - Connection ALLOWED for {}",destinationEnode);
-          return true;
-        }   
-        else{
-          LOG.debug("Permissioning Tx UNSUCCESSFULL - Connection FORBIDDEN for {}",destinationEnode);
-          return false;
-        }  
-      }
-      else{ 
-        LOG.debug("Permissioning Tx Simulation Happend but UNSUCCESSFULL - If smart contract address is correct, either REVERTED or INVALID - Connection FORBIDDEN", ALLOW);
-
-        if(!txSimulationResult.get().getRevertReason().isEmpty()){
-          LOG.trace("Permissioning Tx Simulation Happend but UNSUCCESSFULL - Permissioning Tx was REVERTED");
-        } 
-
-        if(!txSimulationResult.get().getInvalidReason().isEmpty()){
-          LOG.trace("Permissioning Tx Simulation Happend but UNSUCCESSFULL - Permissioning Tx was INVALID due to: {}", txSimulationResult.get().getInvalidReason().get());
-        }
-        
-        return false;
-      }
-    }
-    else{
-      LOG.debug("Permissioning Tx did not happen. There is no result present");
-      return false;
-    }
+    return txSimulationReturnEval(txSimulationResult, destinationEnode);
   }
 
+  
+  /*---
+   * Function to check the result of the transaction simulation
+   */
+  private boolean txSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult, EnodeURL destinationEnode){
+
+    if (!txSimulationResult.isPresent()) {
+      LOG.debug("Permissioning Tx did not happen. No result present");
+      return false;
+    }
+    
+    var result = txSimulationResult.get();
+    
+    if (!result.isSuccessful()) {
+        LOG.debug("Permissioning Tx Simulation failed - Connection FORBIDDEN");
+    
+        result.getRevertReason().ifPresent(reason -> 
+            LOG.trace("Permissioning Tx was REVERTED")
+        );
+    
+        result.getInvalidReason().ifPresent(reason -> 
+            LOG.trace("Permissioning Tx was INVALID - Reason: {}", reason)
+        );
+    
+        return false;
+    }
+    final String ALLOW = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
+    boolean isAllowed = result.result().getOutput().compareTo(Bytes.fromHexString(ALLOW)) == 0;
+    
+    LOG.debug("Permissioning Tx {} - Connection {} for {}",
+        isAllowed ? "SUCCESSFUL" : "UNSUCCESSFUL",
+        isAllowed ? "ALLOWED" : "FORBIDDEN",
+        destinationEnode
+    );
+    
+    return isAllowed;
+  }
 }

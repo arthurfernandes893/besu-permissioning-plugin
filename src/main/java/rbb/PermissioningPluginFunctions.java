@@ -22,6 +22,7 @@ SPDX-License-Identifier: Apache-2.0
 package rbb;
 
 import java.math.BigInteger;
+import java.util.function.Function;
 
 import org.apache.tuweni.bytes.Bytes;
 
@@ -33,17 +34,20 @@ import org.hyperledger.besu.crypto.SECPSignature;
 import org.hyperledger.besu.crypto.Hash;
 
 import org.hyperledger.besu.datatypes.Wei;
+import org.hyperledger.besu.datatypes.Address;
 
 import org.hyperledger.besu.ethereum.core.Transaction;
+import org.hyperledger.besu.ethereum.permissioning.NodeSmartContractPermissioningController;
 import org.hyperledger.besu.ethereum.transaction.CallParameter;
+import org.hyperledger.besu.plugin.data.EnodeURL;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 
-public class NodePermissioningPluginFunctions {
-
+public class PermissioningPluginFunctions {
+    
     public static final String FUNCTION_SIGNATURE = "connectionAllowed(bytes32,bytes32,bytes16,uint16,bytes32,bytes32,bytes16,uint16)";
     public static final Bytes FUNCTION_SIGNATURE_HASH = Hash.keccak256(Bytes.of(FUNCTION_SIGNATURE.getBytes(UTF_8))).slice(0, 4);  
-
+    
     static {  
         //fake signature for transaction simulation
         final X9ECParameters params = SECNamedCurves.getByName("secp256k1");
@@ -57,9 +61,27 @@ public class NodePermissioningPluginFunctions {
     }
 
     public static final SECPSignature FAKE_SIGNATURE_FOR_SIZE_CALCULATION;
-        
+    
+    public static Transaction generateTransactionForSimulation(final EnodeURL sourceEnode, final EnodeURL destinationEnode, String nodeIngressAdress){
+        //create Payload:
+        final Bytes txPayload = NodeSmartContractPermissioningController.createPayload(
+        PermissioningPluginFunctions.FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
+
+        //Create callParameters(from,to,gasLimit,gasPrice,value,payload)
+        CallParameter callParams = new CallParameter(
+                                                    null, 
+                                                    Address.fromHexString(nodeIngressAdress),
+                                                    -1, 
+                                                    null, 
+                                                    null, 
+                                                    txPayload);
+        //Create Transaction
+        return createTransactionForSimulation(callParams, -1);
+    }
+
+
     //from: https://github.com/Consensys/linea-sequencer/blob/18458ee15a44c143a84f59f77d4247ed3893e12b/sequencer/src/main/java/net/consensys/linea/rpc/methods/LineaEstimateGas.java#L466
-    public static Transaction createTransactionForSimulation(final CallParameter callParameters, final long maxTxGasLimit) {
+    private static Transaction createTransactionForSimulation(final CallParameter callParameters, final long maxTxGasLimit) {
 
         return Transaction.builder()
                 .sender(callParameters.getFrom())
