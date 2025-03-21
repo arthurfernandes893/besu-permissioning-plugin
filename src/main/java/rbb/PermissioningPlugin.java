@@ -1,6 +1,6 @@
 /*
 Copyright 2024 Rede Blockchain Brasil
-
+Copyright 2025 Arthur Fernandes
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
@@ -47,6 +47,7 @@ import org.hyperledger.besu.datatypes.Hash;
 
 import org.hyperledger.besu.ethereum.core.Transaction;
 import org.hyperledger.besu.ethereum.permissioning.NodeSmartContractPermissioningController;
+import org.hyperledger.besu.ethereum.transaction.TransactionSimulator;
 import org.hyperledger.besu.ethereum.transaction.CallParameter;
 
 import org.hyperledger.besu.evm.tracing.OperationTracer;
@@ -86,7 +87,7 @@ public class PermissioningPlugin implements BesuPlugin{
     });
 
     permissioning_service.registerTransactionPermissioningProvider((tx) -> {
-      return TransactionPermissioningPluginFunctions.checkTxAllowed(tx);
+      return checkTxAllowed(tx);
     });
     
   }
@@ -106,9 +107,13 @@ public class PermissioningPlugin implements BesuPlugin{
    */
 
   // CLI names must be of the form "--plugin-<namespace>-...."
-  @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_NODE_INGRESS_ADDRESS}")
+  @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the Node Connection permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_NODE_INGRESS_ADDRESS}")
   public String nodeIngressAdress;
   
+   // CLI names must be of the form "--plugin-<namespace>-...."
+   @Option(names = "--plugin-permissioning-account-ingress-address", description = "CLI option to set the address for the contract that will perform the Account Transaction permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_ACCOUNT_INGRESS_ADDRESS}")
+   public String accountIngressAddress;
+
   private void createPicoCLIOptions(final PicoCLIOptions picoCLIOptions) {
     picoCLIOptions.addPicoCLIOptions(PLUGIN_PREFIX, this);
   }
@@ -129,14 +134,33 @@ public class PermissioningPlugin implements BesuPlugin{
     //simulation
     Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
 
-    return txSimulationReturnEval(txSimulationResult, destinationEnode);
+    return NodeConnectionSimulationReturnEval(txSimulationResult, destinationEnode);
   }
 
-  
+  public boolean checkTxAllowed(final Transaction transaction){
+    
+    if(!checkContractExists(accountIngressAddress)){
+      LOG.warn(
+          "Account permissioning smart contract not found at address {} in current head block. Any transaction will be allowed.",
+          nodeIngressAdress);
+      return true;
+    }
+    //Create Transaction
+    Transaction tx = PermissioningPluginFunctions.generateTransactionForSimulation(transaction,accountIngressAddress);
+
+    //obtaining blockchain head hash
+    Hash chainHeadHash = blockchain_service.getChainHeadHash();
+
+    //simulation
+    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
+
+     return AccountTransactionSimulationReturnEval(txSimulationResult);
+
+  }
   /*---
    * Function to check the result of the transaction simulation
    */
-  private boolean txSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult, EnodeURL destinationEnode){
+  private boolean NodeConnectionSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult, EnodeURL destinationEnode){
 
     if (!txSimulationResult.isPresent()) {
       LOG.debug("Permissioning Tx did not happen. No result present");
@@ -168,5 +192,23 @@ public class PermissioningPlugin implements BesuPlugin{
     );
     
     return isAllowed;
+  }
+  
+  @TODO("Implement the evaluation logic for account transaction simulation results")
+  private boolean AccountTransactionSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult) {
+
+   
+    
+  }
+  
+  private boolean checkContractExists(String address) {
+    final TransactionSimulator transactionSimulator;
+    final Optional<Boolean> contractExists =
+        transactionSimulator.doesAddressExistAtHead(Address.fromHexString(address));
+      
+    if (contractExists.isPresent() && !contractExists.get()) {
+      return false;
+    }
+    return true;
   }
 }
