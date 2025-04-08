@@ -71,20 +71,25 @@ public class PermissioningPluginFunctions {
     }
 
     public static Transaction generateTransactionForSimulation(final EnodeURL sourceEnode, final EnodeURL destinationEnode, String nodeIngressAdress){
+        
         //create Payload:
         final Bytes txPayload = NodeSmartContractPermissioningController
                                 .createPayload(NODE_FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
 
         //Create Transaction
         return createTransactionForSimulation(-1, txPayload, nodeIngressAdress);
+
     }
 
     public static Transaction generateTransactionForSimulation(Transaction transaction, String accountIngressAddress){
+        
         //create Payload:
         final Bytes txPayload = TransactionSmartContractPermissioningController
                                 .createPayload(TX_FUNCTION_SIGNATURE_HASH, transaction);
+
         //Create Transaction
         return createTransactionForSimulation(-1, txPayload, accountIngressAddress); 
+
     }
 
     //inspired by: https://github.com/Consensys/linea-sequencer/blob/18458ee15a44c143a84f59f77d4247ed3893e12b/sequencer/src/main/java/net/consensys/linea/rpc/methods/LineaEstimateGas.java#L466
@@ -109,7 +114,6 @@ public class PermissioningPluginFunctions {
                 .gasPrice(Wei.ZERO)
                 .build();
         
-
     }
 
 }
