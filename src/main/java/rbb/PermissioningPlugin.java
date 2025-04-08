@@ -108,7 +108,7 @@ public class PermissioningPlugin implements BesuPlugin{
 
   // CLI names must be of the form "--plugin-<namespace>-...."
   @Option(names = "--plugin-permissioning-node-ingress-address", description = "CLI option to set the address for the contract that will perform the Node Connection permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_NODE_INGRESS_ADDRESS}")
-  public String nodeIngressAdress;
+  public String nodeIngressAddress;
   
    // CLI names must be of the form "--plugin-<namespace>-...."
    @Option(names = "--plugin-permissioning-account-ingress-address", description = "CLI option to set the address for the contract that will perform the Account Transaction permissioning decision", defaultValue = "${env:BESU_PLUGIN_PERMISSIONING_ACCOUNT_INGRESS_ADDRESS}")
@@ -124,12 +124,22 @@ public class PermissioningPlugin implements BesuPlugin{
    */
 
   public boolean checkConnectionAllowed(final EnodeURL sourceEnode, final EnodeURL destinationEnode){
+    
+    LOG.trace(
+        "Node permissioning - Smart Contract : Checking Connection {}", 
+        sourceEnode.getNodeId());
 
+    if(!checkContractExists(nodeIngressAddress)){
+      LOG.warn(
+          "Node permissioning smart contract not found at address {} in current head block. Any transaction will be allowed.",
+          nodeIngressAddress);
+      return true;
+    }
     //obtaining blockchain head hash
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
     //Create Transaction
-    Transaction tx = PermissioningPluginFunctions.generateTransactionForSimulation(sourceEnode,destinationEnode,nodeIngressAdress);
+    Transaction tx = PermissioningPluginFunctions.generateTransactionForSimulation(sourceEnode,destinationEnode,nodeIngressAddress);
     
     //simulation
     Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
@@ -137,12 +147,20 @@ public class PermissioningPlugin implements BesuPlugin{
     return NodeConnectionSimulationReturnEval(txSimulationResult, destinationEnode);
   }
 
+
+  /*
+   * Function to perform the call to the AccountIngress Contract
+   */
   public boolean checkTxAllowed(final Transaction transaction){
     
+    LOG.trace(
+        "Account permissioning - Smart Contract : Checking transaction {}", 
+        transaction.getHash());
+
     if(!checkContractExists(accountIngressAddress)){
       LOG.warn(
           "Account permissioning smart contract not found at address {} in current head block. Any transaction will be allowed.",
-          nodeIngressAdress);
+          nodeIngressAddress);
       return true;
     }
     //Create Transaction
@@ -157,6 +175,8 @@ public class PermissioningPlugin implements BesuPlugin{
      return AccountTransactionSimulationReturnEval(txSimulationResult);
 
   }
+
+  
   /*---
    * Function to check the result of the transaction simulation
    */
@@ -194,9 +214,10 @@ public class PermissioningPlugin implements BesuPlugin{
     return isAllowed;
   }
   
-  @TODO("Implement the evaluation logic for account transaction simulation results")
-  private boolean AccountTransactionSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult) {
 
+  
+  @TODO("Implement the evaluation logic for account transaction simulation results")
+  private boolean AccountTransactionSimulationReturnEval(Optional<TransactionSimulationResult> result) {
    
     
   }
