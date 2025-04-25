@@ -1,34 +1,21 @@
-# Besu Permissioning Plugin
+# Besu Node and Transaction Permissioning Plugin
 
-O Plugin de Permissionamento é responsável por permissionar (permitir ou não) as conexões entre nós na rede através de uma chamada a um *smart contract*, garantindo **segurança**, **auditabilidade** e **eficiência**.
+This is a forked repository from the original 'Besu Permissioning Plugin' first developed by the Rede Blockchain Brasil Team. The original code can be found in [the RBBNet plugin repo](https://github.com/RBBNet/besu-permissioning-plugin).
 
-## Modo de uso
-Para utilizar o plugin, é necessário:
-- Possuir um nó configurado
-- Na pasta acima daquela que contém o executável do Besu, criar (se ainda não houver sido criada) a pasta `plugins`
-- Adicionar o arquivo `.jar` no diretório `plugins`
-- Iniciar o nó Besu
+To include Transaction Permissioning as a functionality of this plugin, it was necessary to understand how Besu performs this task. To do so, the source code was searched so as to track the Classes and their hierarchy in this proccess. The [Besu Runner Builder](https://github.com/hyperledger/besu/blob/9f76c9cd9538a5aa072a0e3c1ffa51556cf09c1d/besu/src/main/java/org/hyperledger/besu/RunnerBuilder.java#L1133), [Besu Account Permissioning Controler](https://github.com/hyperledger/besu/blob/main/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/account/AccountPermissioningController.java#L31) and the [Besu Transaction SmartContract Permissioning Controller](https://github.com/hyperledger/besu/blob/main/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/TransactionSmartContractPermissioningController.java#L43) were the main source of inspiration/information for this plugin development.
 
-## Funcionamento
-O Plugin será carregado pelo Besu e acessará os serviços dos quais necessita, para que possa registrar um provedor de permissionamento (`NodePermissioningProvider`) perante o Besu. É esse provedor que realiza a chamada ao *smart contract* de permissionamento (no caso da RBB deve ser o `NodeRulesProxy`) para verificar, a cada pedido de conexão, se essa é permitida ou não. Para atingir esse objetivo, o plugin busca operar semelhantemente à forma como o permissionamento nativo do Besu operava.
+Following the aim of Rede Blockchain Brasil to have its permissioning rely upon SmartContracts (on-chain permissioning), this plugin just "consults" the respective permisioning smartcontracts already deployed on the Blockchain through Transaction Simulation. For that, the plugin provides two environment variables for the user to inform the contracts' address : 
 
-O endereço do *smart contract* com as regras de permissionamento é acessado, por padrão, através da variável de ambiente `BESU_PERMISSIONS_NODES_CONTRACT_ADDRESS`, entretanto, pode ser personalizado através da opção de linha de comando `--plugin-permissioning-node-ingress-address` durante a inicialização do Besu.
+- `--plugin-permissioning-node-ingress-address` 
 
-Além disso, para garantir auditabilidade, foram adicionados logs ao fim de cada operação, no nível `DEBUG`, utilizando a biblioteca Log4j,
+- `--plugin-permissioning-account-ingress-address`
 
-## Build
-Em conformidade com as especificações do Besu, o plugin deve ser um arquivo `.jar` auto-contido ("fat Jar"). Para isso, utilizamos o conhecido plugin do Gradle, **Shadow**. Para realizar o build, tendo o Gradle já sido configurado, basta utilizar o comando:
+## Requirements
 
-```bash
-gradlew shadowJar
-```
+## Usage
 
-**Observação**: Opcionalmente, caso já se tenha o gradle instalado localmente, pode-se utilizá-lo diretamente, com o comando `gradle shadowJar`, para realização do build.
+## Important Links
 
-O arquivo binário do plugin será gerado em `build/libs/besu-permissioning-plugin-<versao>-all.jar`
-
-## Links Úteis:
-- [Plugins | Besu documentation](https://besu.hyperledger.org/private-networks/concepts/plugins)
-- [Permissioning plugin | Besu documentation](https://besu.hyperledger.org/private-networks/concepts/permissioning/plugin)
-- [Hyperledger Besu Plugins — Overview | by Dimitar Danailov | Medium](https://medium.com/@d_danailov/hyperledger-besu-plugins-overview-28a241811c0c)
-- [Webinar: Learn How to Leverage Plugin APIs on Hyperledger Besu (YouTube)](https://www.youtube.com/watch?v=78sa2WuA1rg)
+[Besu Runner Builder](https://github.com/hyperledger/besu/blob/9f76c9cd9538a5aa072a0e3c1ffa51556cf09c1d/besu/src/main/java/org/hyperledger/besu/RunnerBuilder.java#L1133)
+[Besu Account Permissioning Controler](https://github.com/hyperledger/besu/blob/main/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/account/AccountPermissioningController.java#L31)
+[Besu Transaction SmartContract Permissioning Controller](https://github.com/hyperledger/besu/blob/main/ethereum/permissioning/src/main/java/org/hyperledger/besu/ethereum/permissioning/TransactionSmartContractPermissioningController.java#L43)
