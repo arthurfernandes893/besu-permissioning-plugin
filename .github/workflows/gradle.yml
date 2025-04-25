@@ -41,7 +41,7 @@ jobs:
       # This command lists the contents of the build/libs directory to confirm the fat JAR was created successfully
     
     - name: Upload Shadow JAR
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: permissioning-plugin-shadow-jar
         path: build/libs/*.jar
