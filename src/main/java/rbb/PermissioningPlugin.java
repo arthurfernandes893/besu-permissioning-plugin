@@ -42,12 +42,10 @@ import org.hyperledger.besu.plugin.services.TransactionSimulationService;
 import org.hyperledger.besu.plugin.data.EnodeURL;
 import org.hyperledger.besu.plugin.data.TransactionSimulationResult;
 
-import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 
 //import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
-import org.hyperledger.besu.ethereum.transaction.TransactionSimulator;
 
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 
