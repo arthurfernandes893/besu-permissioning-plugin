@@ -45,10 +45,9 @@ import org.hyperledger.besu.plugin.data.TransactionSimulationResult;
 import org.hyperledger.besu.datatypes.Address;
 import org.hyperledger.besu.datatypes.Hash;
 
+//import org.hyperledger.besu.datatypes.Transaction;
 import org.hyperledger.besu.ethereum.core.Transaction;
-import org.hyperledger.besu.ethereum.permissioning.NodeSmartContractPermissioningController;
 import org.hyperledger.besu.ethereum.transaction.TransactionSimulator;
-import org.hyperledger.besu.ethereum.transaction.CallParameter;
 
 import org.hyperledger.besu.evm.tracing.OperationTracer;
 
@@ -80,7 +79,7 @@ public class PermissioningPlugin implements BesuPlugin{
 
     context
           .getService(TransactionSimulationService.class)
-          .ifPresentOrElse(TxSimService -> this.txSimulation_service = TxSimService, null);;
+          .ifPresentOrElse(TxSimService -> this.txSimulation_service = TxSimService, () -> LOG.error("Could not obtain TransactionSimulationService"));;
     
     permissioning_service.registerNodePermissioningProvider((sourceEnode, destinationEnode) -> {
       return checkConnectionAllowed(sourceEnode, destinationEnode);
@@ -129,12 +128,6 @@ public class PermissioningPlugin implements BesuPlugin{
         "Node permissioning - Smart Contract : Checking Connection {}", 
         sourceEnode.getNodeId());
 
-    if(!checkContractExists(nodeIngressAddress)){
-      LOG.warn(
-          "Node permissioning smart contract not found at address {} in current head block. Any transaction will be allowed.",
-          nodeIngressAddress);
-      return true;
-    }
     //obtaining blockchain head hash
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
@@ -151,28 +144,19 @@ public class PermissioningPlugin implements BesuPlugin{
   /*
    * Function to perform the call to the AccountIngress Contract
    */
-  public boolean checkTxAllowed(final Transaction transaction){
+  public boolean checkTxAllowed(final org.hyperledger.besu.datatypes.Transaction transaction){
     
     LOG.trace(
-        "Account permissioning - Smart Contract : Checking transaction {}", 
-        transaction.getHash());
-
-    if(!checkContractExists(accountIngressAddress)){
-      LOG.warn(
-          "Account permissioning smart contract not found at address {} in current head block. Any transaction will be allowed.",
-          nodeIngressAddress);
-      return true;
-    }
-    //Create Transaction
-    Transaction tx = PermissioningPluginFunctions.generateTransactionForSimulation(transaction,accountIngressAddress);
-
+      "Account permissioning - Smart Contract : Checking Transaction to address {}",
+      transaction.getTo().get());
+      
     //obtaining blockchain head hash
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
     //simulation
-    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
+    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(transaction,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
 
-     return AccountTransactionSimulationReturnEval(txSimulationResult);
+    return AccountTransactionSimulationReturnEval(txSimulationResult);
 
   }
 
@@ -180,9 +164,10 @@ public class PermissioningPlugin implements BesuPlugin{
   /*---
    * Function to check the result of the transaction simulation
    */
+  @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
   private boolean NodeConnectionSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult, EnodeURL destinationEnode){
 
-    if (!txSimulationResult.isPresent()) {
+    if (txSimulationResult.isEmpty()) {
       LOG.debug("Permissioning Tx did not happen. No result present");
       return false;
     }
@@ -216,20 +201,25 @@ public class PermissioningPlugin implements BesuPlugin{
   
 
   
-  @TODO("Implement the evaluation logic for account transaction simulation results")
   private boolean AccountTransactionSimulationReturnEval(Optional<TransactionSimulationResult> result) {
-   
-    
-  }
-  
-  private boolean checkContractExists(String address) {
-    final TransactionSimulator transactionSimulator;
-    final Optional<Boolean> contractExists =
-        transactionSimulator.doesAddressExistAtHead(Address.fromHexString(address));
-      
-    if (contractExists.isPresent() && !contractExists.get()) {
+    if (result.isEmpty()) {
+      LOG.warn("Account transaction simulation resulted in an empty value. Blocking transaction by default.");
       return false;
     }
-    return true;
+
+    TransactionSimulationResult simulationResult = result.get();
+    if (simulationResult.isSuccessful()) {
+      Bytes output = simulationResult.result().getOutput();
+      if (!output.isEmpty() && output.get(output.size() - 1) == 1) {
+        LOG.debug("Transaction simulation returned success with allowed state. Transaction permitted.");
+        return true;
+      } else {
+        LOG.debug("Transaction simulation returned success with disallowed state. Blocking transaction.");
+        return false;
+      }
+    } else {
+      LOG.warn("Transaction simulation failed. Blocking transaction. Reason: {}", simulationResult.getInvalidReason().orElse("Unknown simulation error."));
+      return false;
+    }
   }
 }

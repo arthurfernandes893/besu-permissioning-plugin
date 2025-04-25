@@ -81,11 +81,19 @@ public class PermissioningPluginFunctions {
 
     }
 
-    public static Transaction generateTransactionForSimulation(Transaction transaction, String accountIngressAddress){
+    public static Transaction generateTransactionForSimulation(org.hyperledger.besu.datatypes.Transaction transaction, String accountIngressAddress){
         
+       Transaction tx = Transaction.builder()
+                .sender(transaction.getSender())
+                .to(transaction.getTo().get())
+                .gasLimit(transaction.getGasLimit())
+                .payload(transaction.getPayload())
+                .signature(FAKE_SIGNATURE_FOR_SIZE_CALCULATION)
+                .gasPrice(Wei.ZERO)
+                .build();
         //create Payload:
         final Bytes txPayload = TransactionSmartContractPermissioningController
-                                .createPayload(TX_FUNCTION_SIGNATURE_HASH, transaction);
+                                .createPayload(TX_FUNCTION_SIGNATURE_HASH, tx);
 
         //Create Transaction
         return createTransactionForSimulation(-1, txPayload, accountIngressAddress); 
