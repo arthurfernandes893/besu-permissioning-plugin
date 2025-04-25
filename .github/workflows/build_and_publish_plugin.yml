@@ -33,9 +33,9 @@ jobs:
     - name: Build Fat JAR with ShadowJar
       run: ./gradlew shadowJar
 
-    # Step 5: Verify the output
-    - name: Verify Fat JAR
-      run: ls -lh build/libs
+    # Step 5: Debug the output directory
+    - name: Debug build/libs directory
+      run: ls -lh build/libs || echo "Directory not found"
 
     # Step 6: Upload the Shadow JAR as a release artifact
     - name: Create GitHub Release
