@@ -1,0 +1,60 @@
+name: Java CI with Gradle and Release
+
+on:
+  workflow_dispatch: # Allows manual triggering of the workflow
+  push:
+    tags:
+      - 'v*' # Automatically triggers the workflow when a tag starting with "v" is pushed
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write # Required to create a release and upload artifacts
+
+    steps:
+    # Step 1: Check out the repository code
+    - name: Check out code
+      uses: actions/checkout@v4
+
+    # Step 2: Set up JDK 21
+    - name: Set up JDK 21
+      uses: actions/setup-java@v4
+      with:
+        java-version: '21'
+        distribution: 'temurin'
+
+    # Step 3: Set up Gradle
+    - name: Set up Gradle
+      uses: gradle/actions/setup-gradle@v4.0.0
+
+    # Step 4: Build the Shadow JAR
+    - name: Build Fat JAR with ShadowJar
+      run: ./gradlew shadowJar
+
+    # Step 5: Verify the output
+    - name: Verify Fat JAR
+      run: ls -lh build/libs
+
+    # Step 6: Upload the Shadow JAR as a release artifact
+    - name: Create GitHub Release
+      id: create_release
+      uses: actions/create-release@v1
+      with:
+        tag_name: ${{ github.ref_name }} # Use the tag that triggered the workflow
+        release_name: Release ${{ github.ref_name }}
+        body: |
+          This release includes the latest build of the permissioning plugin.
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Upload Shadow JAR to Release
+      uses: actions/upload-release-asset@v1
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: build/libs/*.jar
+        asset_name: permissioning-plugin-shadow-jar.jar
+        asset_content_type: application/java-archive
