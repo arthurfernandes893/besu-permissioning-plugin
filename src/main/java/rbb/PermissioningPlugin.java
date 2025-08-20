@@ -5,7 +5,7 @@ Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
 You may obtain a copy of the License at
 
-   http://www.apache.org/licenses/LICENSE-2.0
+  http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -60,6 +60,11 @@ public class PermissioningPlugin implements BesuPlugin{
   private BlockchainService blockchain_service;
   private TransactionSimulationService txSimulation_service;
 
+  /**
+   * Registers the plugin with Besu. This method is called by Besu when loading the plugin.
+   *
+   * @param context The service manager which provides access to Besu services.
+   */
   @Override
   public void register(ServiceManager context) {
 
@@ -89,11 +94,17 @@ public class PermissioningPlugin implements BesuPlugin{
     
   }
 
+  /**
+   * Starts the plugin. This method is called by Besu after the plugin has been registered.
+   */
   @Override
   public void start() {
     LOG.info("Successfully started PermissioningPlugin");
   }
 
+  /**
+   * Stops the plugin. This method is called by Besu when shutting down.
+   */
   @Override
   public void stop() {
     LOG.info("Successfully stopped PermissioningPlugin");
@@ -120,6 +131,14 @@ public class PermissioningPlugin implements BesuPlugin{
    * Function to perform the call to the NodeIngress Contract
    */
 
+  /**
+   * Checks if a connection between two nodes is allowed by simulating a transaction against a smart
+   * contract.
+   *
+   * @param sourceEnode The enode URL of the source node.
+   * @param destinationEnode The enode URL of the destination node.
+   * @return {@code true} if the connection is allowed, {@code false} otherwise.
+   */
   public boolean checkConnectionAllowed(final EnodeURL sourceEnode, final EnodeURL destinationEnode){
     
     LOG.trace(
@@ -130,32 +149,43 @@ public class PermissioningPlugin implements BesuPlugin{
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
     //Create Transaction
-    Transaction tx = PermissioningPluginFunctions.generateTransactionForSimulation(sourceEnode,destinationEnode,nodeIngressAddress);
+    Transaction tx = PermissioningPluginFunctions
+      .generateTransactionForSimulation(sourceEnode,destinationEnode,nodeIngressAddress);
     
     //simulation
-    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
+    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service
+      .simulate(tx,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
 
     return NodeConnectionSimulationReturnEval(txSimulationResult, destinationEnode);
   }
 
 
-  /*
-   * Function to perform the call to the AccountIngress Contract
+  /**
+   * Checks if a transaction is allowed by simulating a call to a permissioning smart contract.
+   *
+   * @param transaction The transaction to be checked.
+   * @return {@code true} if the transaction is allowed, {@code false} otherwise.
    */
-  public boolean checkTxAllowed(final org.hyperledger.besu.datatypes.Transaction transaction){
-    
+  public boolean checkTxAllowed(final org.hyperledger.besu.datatypes.Transaction transaction) {
+
     LOG.trace(
-      "Account permissioning - Smart Contract : Checking Transaction to address {}",
-      transaction.getTo().get());
-      
-    //obtaining blockchain head hash
+        "Account permissioning - Smart Contract : Checking transaction {}", transaction.getHash());
+
+    // obtaining blockchain head hash
     Hash chainHeadHash = blockchain_service.getChainHeadHash();
 
-    //simulation
-    Optional<TransactionSimulationResult> txSimulationResult = txSimulation_service.simulate(transaction,Optional.empty(), chainHeadHash, OperationTracer.NO_TRACING, true);
+    // Create a new transaction for the simulation against the permissioning contract
+    Transaction simulationTx =
+        PermissioningPluginFunctions.generateTransactionForSimulation(
+            transaction, accountIngressAddress);
 
-    return AccountTransactionSimulationReturnEval(txSimulationResult);
+    // simulation
+    Optional<TransactionSimulationResult> txSimulationResult =
+        txSimulation_service.simulate(
+            simulationTx, Optional.empty(), 
+            chainHeadHash, OperationTracer.NO_TRACING, true);
 
+    return AccountTransactionSimulationReturnEval(txSimulationResult, transaction);
   }
 
   
@@ -199,24 +229,51 @@ public class PermissioningPlugin implements BesuPlugin{
   
 
   
-  private boolean AccountTransactionSimulationReturnEval(Optional<TransactionSimulationResult> result) {
+  private boolean AccountTransactionSimulationReturnEval(
+      Optional<TransactionSimulationResult> result,
+      final org.hyperledger.besu.datatypes.Transaction transaction) {
+    final String txHash = transaction.getHash().toString();
+    final String sender = transaction.getSender().toString();
+    final String recipient = transaction.getTo().map(Object::toString).orElse("contract-creation");
+
     if (result.isEmpty()) {
-      LOG.warn("Account transaction simulation resulted in an empty value. Blocking transaction by default.");
+      LOG.warn(
+          "Transaction {} from {} to {}: simulation resulted in an empty value. Blocking transaction by default.",
+          txHash,
+          sender,
+          recipient);
       return false;
     }
 
     TransactionSimulationResult simulationResult = result.get();
     if (simulationResult.isSuccessful()) {
       Bytes output = simulationResult.result().getOutput();
+      // The smart contract is expected to return a boolean.
+      // In many cases, this is a 32-byte value padded with zeros, with the last byte being 0x01
+      // for true or 0x00 for false.
+      // This check is for a single byte or the last byte of a larger return value.
       if (!output.isEmpty() && output.get(output.size() - 1) == 1) {
-        LOG.debug("Transaction simulation returned success with allowed state. Transaction permitted.");
+        LOG.debug(
+            "Transaction {} from {} to {}: permissioning simulation SUCCEEDED. Transaction ALLOWED.",
+            txHash,
+            sender,
+            recipient);
         return true;
       } else {
-        LOG.debug("Transaction simulation returned success with disallowed state. Blocking transaction.");
+        LOG.debug(
+            "Transaction {} from {} to {}: permissioning simulation SUCCEEDED but returned false. Transaction FORBIDDEN.",
+            txHash,
+            sender,
+            recipient);
         return false;
       }
     } else {
-      LOG.warn("Transaction simulation failed. Blocking transaction. Reason: {}", simulationResult.getInvalidReason().orElse("Unknown simulation error."));
+      LOG.warn(
+          "Transaction {} from {} to {}: permissioning simulation FAILED. Transaction FORBIDDEN. Reason: {}",
+          txHash,
+          sender,
+          recipient,
+          simulationResult.getInvalidReason().orElse("Unknown simulation error."));
       return false;
     }
   }

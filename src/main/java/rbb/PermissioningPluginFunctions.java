@@ -70,17 +70,32 @@ public class PermissioningPluginFunctions {
         return Hash.keccak256(Bytes.of(signature.getBytes(UTF_8))).slice(0, 4);
     }
 
-    public static Transaction generateTransactionForSimulation(final EnodeURL sourceEnode, final EnodeURL destinationEnode, String nodeIngressAdress){
+    /**
+     * Generates a transaction to be used for simulating a node connection permissioning check.
+     *
+     * @param sourceEnode The enode of the connecting node.
+     * @param destinationEnode The enode of the destination node.
+     * @param nodeIngressAddress The address of the node permissioning smart contract.
+     * @return A transaction crafted to call the permissioning smart contract.
+     */
+    public static Transaction generateTransactionForSimulation(final EnodeURL sourceEnode, final EnodeURL destinationEnode, String nodeIngressAddress){
         
         //create Payload:
         final Bytes txPayload = NodeSmartContractPermissioningController
                                 .createPayload(NODE_FUNCTION_SIGNATURE_HASH, sourceEnode, destinationEnode);  
 
         //Create Transaction
-        return createTransactionForSimulation(-1, txPayload, nodeIngressAdress);
+        return createTransactionForSimulation(-1, txPayload, nodeIngressAddress);
 
     }
 
+    /**
+     * Generates a transaction to be used for simulating an account transaction permissioning check.
+     *
+     * @param transaction The original transaction being checked.
+     * @param accountIngressAddress The address of the account permissioning smart contract.
+     * @return A transaction crafted to call the permissioning smart contract.
+     */
     public static Transaction generateTransactionForSimulation(org.hyperledger.besu.datatypes.Transaction transaction, String accountIngressAddress){
         
        Transaction tx = Transaction.builder()
