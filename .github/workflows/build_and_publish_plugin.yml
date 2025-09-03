@@ -56,5 +56,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: build/libs/*.jar
-        asset_name: besu-permissioning-plugin.jar
+        asset_name: besu-permissioning-plugin-*.jar
         asset_content_type: application/java-archive
