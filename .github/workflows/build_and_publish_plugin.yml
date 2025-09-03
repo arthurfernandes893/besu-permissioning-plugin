@@ -2,6 +2,10 @@ name: Java CI with Gradle and Release
 
 on:
   workflow_dispatch: # Allows manual triggering of the workflow
+    inputs:
+      release_version:
+        description: 'Release version (e.g., v1.0.0)'
+        required: true
   push:
     tags:
       - 'v*' # Automatically triggers the workflow when a tag starting with "v" is pushed
@@ -37,13 +41,23 @@ jobs:
     - name: Debug build/libs directory
       run: ls -lh build/libs || echo "Directory not found"
 
-    # Step 6: Upload the Shadow JAR as a release artifact
+    # Step 6: Set release tag name
+    - name: Set release version
+      id: release_version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.release_version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
+        fi
+
+    # Step 7: Upload the Shadow JAR as a release artifact
     - name: Create GitHub Release
       id: create_release
       uses: actions/create-release@v1
       with:
-        tag_name: ${{ github.ref_name }} # Use the tag that triggered the workflow
-        release_name: Release ${{ github.ref_name }}
+        tag_name: ${{ steps.release_version.outputs.version }}
+        release_name: Release ${{ steps.release_version.outputs.version }}
         body: |
           This release includes the latest build of the permissioning plugin.
         draft: false
@@ -65,4 +79,3 @@ jobs:
         asset_path: ${{ steps.find-jar.outputs.jar_path }}
         asset_name: $(basename ${{ steps.find-jar.outputs.jar_path }})
         asset_content_type: application/java-archive
-        
