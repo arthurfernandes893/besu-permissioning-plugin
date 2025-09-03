@@ -193,7 +193,7 @@ public class PermissioningPlugin implements BesuPlugin{
    * Function to check the result of the transaction simulation
    */
   @SuppressWarnings("OptionalUsedAsFieldOrParameterType")
-  private boolean NodeConnectionSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult, EnodeURL destinationEnode){
+  public boolean NodeConnectionSimulationReturnEval(Optional<TransactionSimulationResult> txSimulationResult, EnodeURL destinationEnode){
 
     if (txSimulationResult.isEmpty()) {
       LOG.debug("Permissioning Tx did not happen. No result present");
@@ -216,14 +216,22 @@ public class PermissioningPlugin implements BesuPlugin{
         return false;
     }
     final String ALLOW = "0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff";
-    boolean isAllowed = result.result().getOutput().compareTo(Bytes.fromHexString(ALLOW)) == 0;
-    
-    LOG.debug("Permissioning Tx {} - Connection {} for {}",
+    Bytes output = result.result().getOutput();
+
+    if (output == null || output.isEmpty()) {
+        LOG.debug("Permissioning Tx Simulation returned empty or null output - Connection FORBIDDEN");
+        return false;
+    }
+
+    boolean isAllowed = output.compareTo(Bytes.fromHexString(ALLOW)) == 0;
+
+    LOG.debug("Permissioning Tx {} - Connection {} for {}. Output: {}",
         isAllowed ? "SUCCESSFUL" : "UNSUCCESSFUL",
         isAllowed ? "ALLOWED" : "FORBIDDEN",
-        destinationEnode
+        destinationEnode,
+        output.toHexString()
     );
-    
+
     return isAllowed;
   }
   
