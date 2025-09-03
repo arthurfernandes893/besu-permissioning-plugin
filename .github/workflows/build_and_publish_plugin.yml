@@ -28,6 +28,7 @@ jobs:
       with:
         java-version: '21'
         distribution: 'temurin'
+        cache: gradle
 
     # Step 3: Set up Gradle
     - name: Set up Gradle
@@ -51,31 +52,25 @@ jobs:
           echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
         fi
 
-    # Step 7: Upload the Shadow JAR as a release artifact
-    - name: Create GitHub Release
-      id: create_release
-      uses: actions/create-release@v1
-      with:
-        tag_name: ${{ steps.release_version.outputs.version }}
-        release_name: Release ${{ steps.release_version.outputs.version }}
-        body: |
-          This release includes the latest build of the permissioning plugin.
-        draft: false
-        prerelease: false
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
+    # Step 7: Find JAR file
     - name: Find JAR file
       id: find-jar
       run: |
         JAR_FILE=$(find build/libs -name "*.jar" | head -n 1)
         echo "Found JAR file: $JAR_FILE"
         echo "jar_path=$JAR_FILE" >> $GITHUB_OUTPUT
-      
-    - name: Upload Shadow JAR to Release
-      uses: actions/upload-release-asset@v1
+
+    # Step 8: Create Release and Upload Assets
+    - name: Create Release and Upload Assets
+      uses: softprops/action-gh-release@v1
       with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ${{ steps.find-jar.outputs.jar_path }}
-        asset_name: $(basename ${{ steps.find-jar.outputs.jar_path }})
-        asset_content_type: application/java-archive
+        tag_name: ${{ steps.release_version.outputs.version }}
+        name: Release ${{ steps.release_version.outputs.version }}
+        body: |
+          This release includes the latest build of the permissioning plugin.
+        draft: false
+        prerelease: false
+        files: |
+          ${{ steps.find-jar.outputs.jar_path }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
