@@ -16,7 +16,7 @@ object Versions {
 }
 
 group = "rbb"
-version = "${Versions.besu}-SNAPSHOT"
+version = "1.1.0-SNAPSHOT"
 
 plugins {
   id("java")
