@@ -93,3 +93,9 @@ The plugin produces a self-contained “fat JAR” using Gradle Shadow.
     --plugin-permissioning-node-ingress-address=0x0000000000000000000000000000000000000001 \
     --plugin-permissioning-account-ingress-address=0x0000000000000000000000000000000000000002
     ```
+
+## Important links
+- [Plugins | Besu documentation](https://besu.hyperledger.org/private-networks/concepts/plugins)
+- [Permissioning plugin | Besu documentation](https://besu.hyperledger.org/private-networks/concepts/permissioning/plugin)
+- [Hyperledger Besu Plugins — Overview | by Dimitar Danailov | Medium](https://medium.com/@d_danailov/hyperledger-besu-plugins-overview-28a241811c0c)
+- [Webinar: Learn How to Leverage Plugin APIs on Hyperledger Besu (YouTube)](https://www.youtube.com/watch?v=78sa2WuA1rg)
