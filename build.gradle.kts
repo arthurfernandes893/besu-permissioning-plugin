@@ -13,6 +13,9 @@ object Versions {
   const val bouncycastle = "1.80"
   const val besu = "25.3.0"
   const val besuCrypto = "23.1.3"
+  const val junitJupiter = "5.10.2"
+  const val mockito = "5.12.0"
+  const val assertj = "3.27.7"
 }
 
 group = "rbb"
@@ -58,4 +61,13 @@ dependencies {
   implementation("org.hyperledger.besu.internal:crypto:${Versions.besuCrypto}")
   implementation("org.hyperledger.besu.internal:core:${Versions.besu}")
   implementation("org.hyperledger.besu.internal:permissioning:${Versions.besu}")
+
+  testImplementation("org.junit.jupiter:junit-jupiter:${Versions.junitJupiter}")
+  testImplementation("org.mockito:mockito-core:${Versions.mockito}")
+  testImplementation("org.mockito:mockito-inline:${Versions.mockito}")
+  testImplementation("org.assertj:assertj-core:${Versions.assertj}")
+}
+
+tasks.test {
+  useJUnitPlatform()
 }
